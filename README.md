@@ -209,13 +209,13 @@ This removes the need to manually:
 ### Home
 
 ```text
-http://<EC2-IP>:30080/
+http://3.110.37.35:30080/
 ```
 
 ### Health Check
 
 ```text
-http://<EC2-IP>:30080/health
+http://3.110.37.35:30080/health
 ```
 
 Example response:
@@ -231,7 +231,7 @@ Example response:
 ### Application Status
 
 ```text
-http://<EC2-IP>:30080/api/status
+http://3.110.37.35:30080/api/status
 ```
 
 Example:
@@ -248,7 +248,7 @@ Example:
 ### Version
 
 ```text
-http://<EC2-IP>:30080/api/version
+http://3.110.37.35:30080/api/version
 ```
 
 ---
