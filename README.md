@@ -411,7 +411,7 @@ The project follows several basic security practices:
 
 ### 1. CloudDeploy Application
 
-*https://github.com/Pravesh880082/CloudDeploy/blob/0468886bdf3d2a5cae927f3af15020ffa9379665/1.png*
+https://github.com/Pravesh880082/CloudDeploy/blob/9c43451009ced8de2b903d1414f66021f9541297/1.png
 
 ```text
 docs/screenshots/clouddeploy-home.png
