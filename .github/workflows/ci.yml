@@ -1,4 +1,4 @@
-name: CloudDeploy CI
+name: CloudDeploy CI/CD
 
 on:
   push:
@@ -7,7 +7,6 @@ on:
   pull_request:
     branches:
       - main
-
 jobs:
 
   test:
@@ -35,7 +34,7 @@ jobs:
 
 
   docker-build:
-    name: Build Docker Image
+    name: Build and Deploy
     runs-on: ubuntu-latest
     needs: test
 
@@ -47,3 +46,61 @@ jobs:
       - name: Build Docker image
         run: |
           docker build -t clouddeploy:${{ github.sha }} .
+
+      - name: Save Docker image
+        run: |
+          docker save clouddeploy:${{ github.sha }} -o clouddeploy.tar
+
+      - name: Upload image to EC2
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+          SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+        run: |
+          printf '%s\n' "$SSH_KEY" > deploy_key
+          chmod 600 deploy_key
+
+          scp \
+            -o StrictHostKeyChecking=no \
+            -i deploy_key \
+            clouddeploy.tar \
+            ${EC2_USER}@${EC2_HOST}:/tmp/clouddeploy.tar
+
+      - name: Deploy to Kubernetes
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+          SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+        run: |
+          printf '%s\n' "$SSH_KEY" > deploy_key
+          chmod 600 deploy_key
+
+          ssh \
+            -o StrictHostKeyChecking=no \
+            -i deploy_key \
+            ${EC2_USER}@${EC2_HOST} \
+            "sudo k3s ctr -n k8s.io images import /tmp/clouddeploy.tar && \
+             sudo k3s kubectl set image deployment/clouddeploy \
+             clouddeploy=clouddeploy:${{ github.sha }} \
+             -n clouddeploy && \
+             sudo k3s kubectl patch deployment clouddeploy \
+             -n clouddeploy \
+             -p '{\"spec\":{\"template\":{\"spec\":\"containers\":[{\"name\":\"clouddeploy\",\"imagePullPolicy\":\"Never\"}]}}}}' && \
+             sudo k3s kubectl rollout status deployment/clouddeploy \
+             -n clouddeploy --timeout=180s"
+
+      - name: Verify deployment
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+          SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+        run: |
+          printf '%s\n' "$SSH_KEY" > deploy_key
+          chmod 600 deploy_key
+
+          ssh \
+            -o StrictHostKeyChecking=no \
+            -i deploy_key \
+            ${EC2_USER}@${EC2_HOST} \
+            "sudo k3s kubectl get pods -n clouddeploy && \
+             curl -f http://localhost:30080/health"
