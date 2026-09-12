@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: clouddeploy
+  namespace: clouddeploy
+  labels:
+    app: clouddeploy
+
+spec:
+  replicas: 2
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+
+  selector:
+    matchLabels:
+      app: clouddeploy
+
+  template:
+    metadata:
+      labels:
+        app: clouddeploy
+
+    spec:
+      containers:
+        - name: clouddeploy
+
+          image: clouddeploy:1.0.0
+
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - containerPort: 5000
+
+          envFrom:
+            - configMapRef:
+                name: clouddeploy-config
+
+          env:
+            - name: APP_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: clouddeploy-secret
+                  key: APP_SECRET
+
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 15
+            periodSeconds: 20
